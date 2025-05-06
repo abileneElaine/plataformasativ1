@@ -40,5 +40,11 @@ public class Loader : MonoBehaviour
         yield return new WaitForSeconds(delay);
         LoadScene(sceneName);
     }
+
+    public void LoadGameAndGUI()
+    {
+        SceneManager.LoadScene("Game");
+        SceneManager.LoadScene("GUI", LoadSceneMode.Additive);
+    }
 }
 
