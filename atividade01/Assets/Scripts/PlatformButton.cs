@@ -7,9 +7,11 @@ public class PlatformButton : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D other)
     {
         //verifica se o que entrou no botão tem a tag "Player"
-        object staticEventeChannel;
+        object staticEventChannel;
         if (other.CompareTag("Player"))
         {
+            Debug.Log("Botão pressionado, enviando ID: " + doorIDOpen);
+
             //emite um evento dizendo que a porta com esse ID deve abrir
             StaticEventChannel.RaiseButtonPressed(doorIDOpen);
         }
