@@ -7,6 +7,11 @@ public class SimplePlayer : MonoBehaviour
     
     public CommandManager MyCommandManager;
 
+    private void Start()
+    {
+        MyCommandManager = new CommandManager();
+    }
+
     // Update is called once per frame
     void Update()
     {
@@ -21,16 +26,27 @@ public class SimplePlayer : MonoBehaviour
         if (Keyboard.current.dKey.wasPressedThisFrame)
         {
             //transform.position += Vector3.right;
-            MyCommandManager.AddCommand(new MoveUp(transform));
+            MyCommandManager.AddCommand(new MoveRight(transform));
             MyCommandManager.DoCommand();
         }
 
-    }    private void OnTriggerEnter2D(Collider2D other)
+        if (Keyboard.current.uKey.wasPressedThisFrame)
+        {
+            UndoLastCommand();
+        }
+
+    }    
+    private void OnTriggerEnter2D(Collider2D other)
         {
             if (other.CompareTag("Coin"))
             {
-                moedas++;
-                Destroy(other.gameObject);
+                MyCommandManager.AddCommand(new GetCoin(other.gameObject,  this));
+                MyCommandManager.DoCommand();
             }
         }
+
+    public void UndoLastCommand()
+    {
+        MyCommandManager.UndoCommand();
+    }
 }
