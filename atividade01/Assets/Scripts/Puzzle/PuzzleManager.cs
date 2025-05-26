@@ -3,42 +3,170 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
-public class PuzzleManager : MonoBehaviour //gerencia o jogo tdinho
+// Este script deve ser colocado em um GameObject vazio chamado "GameManager" ou similar
+public class PuzzleManager : MonoBehaviour
 {
-    public Transform puzzleGrid; // Referência ao painel onde os botões (peças) estão
-    public Button undiButton; // Botão de desfazer
-    public Button replayButton; // Botão de ver replay
-    public Button skipButton;  // Botão de pular replay
-    
-    private List<ICommand> commandHistory = new List<ICommand>();  // Histórico de comandos executados
-    private Stack<ICommand> undoStack = new Stack<ICommand>();     // Pilha para desfazer
-    private List<ICommand> replayCommands = new List<ICommand>(); // Lista de comandos do replay
+    public Transform puzzleGrid; // Painel que contém os botões (peças do puzzle)
+    public Button undoButton;    // Botão de desfazer jogada
+    public Button replayButton;  // Botão de assistir replay
+    public Button skipButton;    // Botão de pular o replay
 
-    private Piece firstSelected = null; //gurada a primeira peça clicada
-    private bool isReplaying = false;  // Flag para saber se está executando replay
+    private List<ICommand1> commandHistory = new List<ICommand1>(); // Armazena todas as jogadas feitas (para replay)
+    private Stack<ICommand1> undoStack = new Stack<ICommand1>();    // Armazena comandos que podem ser desfeitos
 
-    
-    
+    private List<Piece> pieces = new List<Piece>(); // Lista de todas as peças no tabuleiro
+    private Piece firstSelected = null; // Guarda a primeira peça clicada
+
+    private bool isReplaying = false;   // Flag para saber se o replay está em execução
+
     void Start()
     {
-        //desativa os botões de replay e pular no inicio do jogo
         replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
-        
-        //organiza e configura as peças
-        SetupPieces()
-        {
-            pieces.Clear();
-            
-        }
 
-        // Embaralha as peças ao iniciar
-        ShufflePieces();
+        SetupPieces();      // Configura as peças e seus índices
+        ShufflePieces();    // Embaralha a ordem inicial das peças
     }
 
-    // Update is called once per frame
-    void Update()
+    // Associa cada peça ao seu índice correto
+    void SetupPieces()
     {
-        
+        pieces.Clear();
+
+        for (int i = 0; i < puzzleGrid.childCount; i++)
+        {
+            Transform t = puzzleGrid.GetChild(i);
+            Piece p = t.GetComponent<Piece>();
+            p.manager = this;
+            p.SetIndex(i); // Define o índice correto dessa peça
+            pieces.Add(p);
+        }
+    }
+
+    // Embaralha a ordem das peças no início
+    void ShufflePieces()
+    {
+        for (int i = 0; i < pieces.Count; i++)
+        {
+            int randomIndex = Random.Range(0, pieces.Count);
+            Transform a = pieces[i].transform;
+            Transform b = pieces[randomIndex].transform;
+
+            // Troca na hierarquia
+            int indexA = a.GetSiblingIndex();
+            int indexB = b.GetSiblingIndex();
+            a.SetSiblingIndex(indexB);
+            b.SetSiblingIndex(indexA);
+        }
+    }
+
+    // Chamado quando uma peça é clicada
+    public void OnPieceClicked(Piece clicked)
+    {
+        if (isReplaying) return; // Ignora cliques durante o replay
+
+        if (firstSelected == null)
+        {
+            firstSelected = clicked; // Seleciona a primeira peça
+        }
+        else
+        {
+            // Segunda peça clicada → troca as peças
+            Transform a = firstSelected.transform;
+            Transform b = clicked.transform;
+
+            int indexA = a.GetSiblingIndex();
+            int indexB = b.GetSiblingIndex();
+
+            // Cria o comando e executa
+            SwapCommand cmd = new SwapCommand(a, b, indexA, indexB);
+            cmd.Execute();
+
+            // Guarda no histórico e pilha de undo
+            commandHistory.Add(cmd);
+            undoStack.Push(cmd);
+
+            // Limpa seleção
+            firstSelected = null;
+
+            // Verifica se o jogo foi resolvido
+            CheckWin();
+        }
+    }
+
+    // Verifica se todas as peças estão no lugar correto
+    void CheckWin()
+    {
+        for (int i = 0; i < puzzleGrid.childCount; i++)
+        {
+            Piece p = puzzleGrid.GetChild(i).GetComponent<Piece>();
+            if (p.correctIndex != i)
+                return; // Se uma peça está fora do lugar, ainda não ganhou
+        }
+
+        // Se passou por todas, o puzzle foi resolvido!
+        Debug.Log("🎉 Quebra-cabeça completo!");
+
+        // Ativa opções de replay
+        replayButton.gameObject.SetActive(true);
+        skipButton.gameObject.SetActive(true);
+    }
+
+    // Chamado pelo botão de desfazer
+    public void Undo()
+    {
+        if (isReplaying || undoStack.Count == 0 || firstSelected != null) return;
+
+        ICommand1 lastCommand = undoStack.Pop(); // Remove o último comando
+        lastCommand.Undo();                     // Desfaz a troca
+    }
+
+    // Chamado ao clicar em "Ver Replay"
+    public void StartReplay()
+    {
+        if (isReplaying) return;
+
+        StartCoroutine(ReplaySequence()); // Inicia a rotina do replay
+    }
+
+    // Coroutine que executa o replay, com delay de 1 segundo entre as jogadas
+    IEnumerator ReplaySequence()
+    {
+        isReplaying = true;
+        skipButton.gameObject.SetActive(true);
+
+        // Reinicia o puzzle embaralhado
+        ShufflePieces();
+
+        // Espera um pouco antes de começar o replay
+        yield return new WaitForSeconds(1f);
+
+        foreach (ICommand1 cmd in commandHistory)
+        {
+            cmd.Execute();
+            yield return new WaitForSeconds(1f); // Espera 1 segundo entre cada jogada
+        }
+
+        isReplaying = false;
+        skipButton.gameObject.SetActive(false);
+
+        Debug.Log("✅ Replay finalizado!");
+    }
+
+    // Chamado ao clicar em "Pular"
+    public void SkipReplay()
+    {
+        StopAllCoroutines(); // Interrompe a animação do replay
+        isReplaying = true;
+
+        // Executa todas as jogadas instantaneamente
+        foreach (ICommand1 cmd in commandHistory)
+        {
+            cmd.Execute();
+        }
+
+        isReplaying = false;
+        skipButton.gameObject.SetActive(false);
+        Debug.Log("⏩ Replay pulado!");
     }
 }

@@ -1,16 +1,18 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Piece : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public int correctIndex; // Posição correta da peça no puzzle
+    public PuzzleManager manager;
+
+    public void SetIndex(int index)
     {
-        
+        correctIndex = index;
     }
 
-    // Update is called once per frame
-    void Update()
+    public void OnClick()
     {
-        
+        manager.OnPieceClicked(this);
     }
 }
