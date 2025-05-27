@@ -52,12 +52,19 @@ public class PuzzleManager : MonoBehaviour
             Transform a = pieces[i].transform;
             Transform b = pieces[randomIndex].transform;
 
-            // Troca na hierarquia
+            // Troca a posição visual no grid (Canvas)
             int indexA = a.GetSiblingIndex();
             int indexB = b.GetSiblingIndex();
             a.SetSiblingIndex(indexB);
             b.SetSiblingIndex(indexA);
         }
+/*
+        // 🛠 Atualiza a lista pieces com a nova ordem visual dos botões
+        pieces.Clear();
+        for (int i = 0; i < puzzleGrid.childCount; i++)
+        {
+            pieces.Add(puzzleGrid.GetChild(i).GetComponent<Piece>());
+        }*/
     }
 
     // Chamado quando uma peça é clicada
@@ -97,10 +104,11 @@ public class PuzzleManager : MonoBehaviour
     // Verifica se todas as peças estão no lugar correto
     void CheckWin()
     {
-        for (int i = 0; i < puzzleGrid.childCount; i++)
+        Debug.Log(puzzleGrid.childCount);
+        for (int i = 0; i < pieces.Count; i++)
         {
-            Piece p = puzzleGrid.GetChild(i).GetComponent<Piece>();
-            if (p.correctIndex != i)
+            Piece[] pieces = puzzleGrid.GetComponentsInChildren<Piece>();
+            if (pieces[i].correctIndex != i)
                 return; // Se uma peça está fora do lugar, ainda não ganhou
         }
 
@@ -109,7 +117,7 @@ public class PuzzleManager : MonoBehaviour
 
         // Ativa opções de replay
         replayButton.gameObject.SetActive(true);
-        skipButton.gameObject.SetActive(true);
+        skipButton.gameObject.SetActive(true); 
     }
 
     // Chamado pelo botão de desfazer
@@ -169,4 +177,4 @@ public class PuzzleManager : MonoBehaviour
         skipButton.gameObject.SetActive(false);
         Debug.Log("⏩ Replay pulado!");
     }
-}
+}       
