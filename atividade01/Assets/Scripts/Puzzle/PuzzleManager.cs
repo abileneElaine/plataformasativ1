@@ -3,32 +3,35 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
-// Este script deve ser colocado em um GameObject vazio chamado "GameManager" ou similar
 public class PuzzleManager : MonoBehaviour
 {
-    public Transform puzzleGrid; // Painel que contém os botões (peças do puzzle)
-    public Button undoButton;    // Botão de desfazer jogada
-    public Button replayButton;  // Botão de assistir replay
-    public Button skipButton;    // Botão de pular o replay
+    public Transform puzzleGrid;
+    public Button undoButton;
+    public Button replayButton;
+    public Button skipButton;
 
-    private List<ICommand1> commandHistory = new List<ICommand1>(); // Armazena todas as jogadas feitas (para replay)
-    private Stack<ICommand1> undoStack = new Stack<ICommand1>();    // Armazena comandos que podem ser desfeitos
+    public GameObject winPanel;         // ➕ Painel de vitória
+    public Button restartButton;        // ➕ Botão de jogar novamente
 
-    private List<Piece> pieces = new List<Piece>(); // Lista de todas as peças no tabuleiro
-    private Piece firstSelected = null; // Guarda a primeira peça clicada
+    private List<ICommand1> commandHistory = new List<ICommand1>();
+    private Stack<ICommand1> undoStack = new Stack<ICommand1>();
 
-    private bool isReplaying = false;   // Flag para saber se o replay está em execução
+    private List<Piece> pieces = new List<Piece>();
+    private Piece firstSelected = null;
+
+    private bool isReplaying = false;
 
     void Start()
     {
         replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
+        winPanel.SetActive(false); // ➕ Oculta painel de vitória no início
+        restartButton.gameObject.SetActive(false); // ➕ Oculta botão de reinício no início
 
-        SetupPieces();      // Configura as peças e seus índices
-        ShufflePieces();    // Embaralha a ordem inicial das peças
+        SetupPieces();
+        ShufflePieces();
     }
 
-    // Associa cada peça ao seu índice correto
     void SetupPieces()
     {
         pieces.Clear();
@@ -38,12 +41,11 @@ public class PuzzleManager : MonoBehaviour
             Transform t = puzzleGrid.GetChild(i);
             Piece p = t.GetComponent<Piece>();
             p.manager = this;
-            p.SetIndex(i); // Define o índice correto dessa peça
+            p.SetIndex(i);
             pieces.Add(p);
         }
     }
 
-    // Embaralha a ordem das peças no início
     void ShufflePieces()
     {
         for (int i = 0; i < pieces.Count; i++)
@@ -52,107 +54,90 @@ public class PuzzleManager : MonoBehaviour
             Transform a = pieces[i].transform;
             Transform b = pieces[randomIndex].transform;
 
-            // Troca a posição visual no grid (Canvas)
             int indexA = a.GetSiblingIndex();
             int indexB = b.GetSiblingIndex();
             a.SetSiblingIndex(indexB);
             b.SetSiblingIndex(indexA);
         }
-/*
-        // 🛠 Atualiza a lista pieces com a nova ordem visual dos botões
-        pieces.Clear();
-        for (int i = 0; i < puzzleGrid.childCount; i++)
-        {
-            pieces.Add(puzzleGrid.GetChild(i).GetComponent<Piece>());
-        }*/
     }
 
-    // Chamado quando uma peça é clicada
     public void OnPieceClicked(Piece clicked)
     {
-        if (isReplaying) return; // Ignora cliques durante o replay
+        if (isReplaying) return;
 
         if (firstSelected == null)
         {
-            firstSelected = clicked; // Seleciona a primeira peça
+            firstSelected = clicked;
         }
         else
         {
-            // Segunda peça clicada → troca as peças
             Transform a = firstSelected.transform;
             Transform b = clicked.transform;
 
             int indexA = a.GetSiblingIndex();
             int indexB = b.GetSiblingIndex();
 
-            // Cria o comando e executa
             SwapCommand cmd = new SwapCommand(a, b, indexA, indexB);
             cmd.Execute();
 
-            // Guarda no histórico e pilha de undo
             commandHistory.Add(cmd);
             undoStack.Push(cmd);
 
-            // Limpa seleção
             firstSelected = null;
 
-            // Verifica se o jogo foi resolvido
             CheckWin();
         }
     }
 
-    // Verifica se todas as peças estão no lugar correto
     void CheckWin()
     {
         Debug.Log(puzzleGrid.childCount);
-        for (int i = 0; i < pieces.Count; i++)
+
+        Piece[] currentPieces = puzzleGrid.GetComponentsInChildren<Piece>();
+        for (int i = 0; i < currentPieces.Length; i++)
         {
-            Piece[] pieces = puzzleGrid.GetComponentsInChildren<Piece>();
-            if (pieces[i].correctIndex != i)
-                return; // Se uma peça está fora do lugar, ainda não ganhou
+            if (currentPieces[i].correctIndex != i)
+                return;
         }
 
-        // Se passou por todas, o puzzle foi resolvido!
         Debug.Log("🎉 Quebra-cabeça completo!");
 
-        // Ativa opções de replay
+        // ➕ Mostrar vitória e botões
+        winPanel.SetActive(true);
+        restartButton.gameObject.SetActive(true);
         replayButton.gameObject.SetActive(true);
-        skipButton.gameObject.SetActive(true); 
+        skipButton.gameObject.SetActive(true);
     }
 
-    // Chamado pelo botão de desfazer
     public void Undo()
     {
         if (isReplaying || undoStack.Count == 0 || firstSelected != null) return;
 
-        ICommand1 lastCommand = undoStack.Pop(); // Remove o último comando
-        lastCommand.Undo();                     // Desfaz a troca
+        ICommand1 lastCommand = undoStack.Pop();
+        lastCommand.Undo();
     }
 
-    // Chamado ao clicar em "Ver Replay"
     public void StartReplay()
     {
         if (isReplaying) return;
-
-        StartCoroutine(ReplaySequence()); // Inicia a rotina do replay
+        StartCoroutine(ReplaySequence());
     }
 
-    // Coroutine que executa o replay, com delay de 1 segundo entre as jogadas
     IEnumerator ReplaySequence()
     {
         isReplaying = true;
         skipButton.gameObject.SetActive(true);
+        winPanel.SetActive(false); // ➕ Oculta painel de vitória no replay
+        restartButton.gameObject.SetActive(false); // ➕ Oculta botão reiniciar no começo do replay
 
-        // Reinicia o puzzle embaralhado
         ShufflePieces();
 
-        // Espera um pouco antes de começar o replay
         yield return new WaitForSeconds(1f);
 
         foreach (ICommand1 cmd in commandHistory)
         {
             cmd.Execute();
-            yield return new WaitForSeconds(1f); // Espera 1 segundo entre cada jogada
+            yield return new WaitForSeconds(1f);
         }
 
         isReplaying = false;
@@ -161,20 +146,41 @@ public class PuzzleManager : MonoBehaviour
         Debug.Log("✅ Replay finalizado!");
     }
 
-    // Chamado ao clicar em "Pular"
     public void SkipReplay()
     {
-        StopAllCoroutines(); // Interrompe a animação do replay
+        StopAllCoroutines();
         isReplaying = true;
 
-        // Executa todas as jogadas instantaneamente
         foreach (ICommand1 cmd in commandHistory)
         {
             cmd.Execute();
         }
 
         isReplaying = false;
+
+        // ➕ Esconde tudo, exceto o botão de jogar novamente
+        winPanel.SetActive(false);
+        undoButton.gameObject.SetActive(false);
+        replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
+        restartButton.gameObject.SetActive(true);
+
         Debug.Log("⏩ Replay pulado!");
     }
-}       
+
+    // ➕ Método chamado pelo botão de jogar novamente
+    public void RestartGame()
+    {
+        ShufflePieces();
+        commandHistory.Clear();
+        undoStack.Clear();
+
+        winPanel.SetActive(false);
+        restartButton.gameObject.SetActive(false);
+        replayButton.gameObject.SetActive(false);
+        skipButton.gameObject.SetActive(false);
+        undoButton.gameObject.SetActive(true);
+
+        Debug.Log("🔁 Jogo reiniciado.");
+    }
+}
