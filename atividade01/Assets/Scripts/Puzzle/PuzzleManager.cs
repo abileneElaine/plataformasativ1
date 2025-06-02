@@ -102,11 +102,15 @@ public class PuzzleManager : MonoBehaviour
 
         Debug.Log("🎉 Quebra-cabeça completo!");
 
-        // ➕ Mostrar vitória e botões
+        // ➕ Mostrar vitória e todos os botões
         winPanel.SetActive(true);
         restartButton.gameObject.SetActive(true);
         replayButton.gameObject.SetActive(true);
         skipButton.gameObject.SetActive(true);
+        undoButton.gameObject.SetActive(true);
+
+        // ✅ Garante que os botões fiquem por cima do painel
+        BringButtonsToFront();
     }
 
     public void Undo()
@@ -126,12 +130,14 @@ public class PuzzleManager : MonoBehaviour
     IEnumerator ReplaySequence()
     {
         isReplaying = true;
+
         skipButton.gameObject.SetActive(true);
-        winPanel.SetActive(false); // ➕ Oculta painel de vitória no replay
-        restartButton.gameObject.SetActive(false); // ➕ Oculta botão reiniciar no começo do replay
+        winPanel.SetActive(false);
+        restartButton.gameObject.SetActive(false);
+        replayButton.gameObject.SetActive(false);
+        undoButton.gameObject.SetActive(false);
 
         ShufflePieces();
-
         yield return new WaitForSeconds(1f);
 
         foreach (ICommand1 cmd in commandHistory)
@@ -141,7 +147,15 @@ public class PuzzleManager : MonoBehaviour
         }
 
         isReplaying = false;
-        skipButton.gameObject.SetActive(false);
+
+        winPanel.SetActive(true);
+        restartButton.gameObject.SetActive(true);
+        replayButton.gameObject.SetActive(true);
+        skipButton.gameObject.SetActive(true);
+        undoButton.gameObject.SetActive(true);
+
+        // ✅ Traz os botões para frente após replay
+        BringButtonsToFront();
 
         Debug.Log("✅ Replay finalizado!");
     }
@@ -158,17 +172,19 @@ public class PuzzleManager : MonoBehaviour
 
         isReplaying = false;
 
-        // ➕ Esconde tudo, exceto o botão de jogar novamente
         winPanel.SetActive(false);
         undoButton.gameObject.SetActive(false);
         replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
+
         restartButton.gameObject.SetActive(true);
+
+        // ✅ Traz o botão para frente após pular replay
+        restartButton.transform.SetAsLastSibling();
 
         Debug.Log("⏩ Replay pulado!");
     }
 
-    // ➕ Método chamado pelo botão de jogar novamente
     public void RestartGame()
     {
         ShufflePieces();
@@ -182,5 +198,14 @@ public class PuzzleManager : MonoBehaviour
         undoButton.gameObject.SetActive(true);
 
         Debug.Log("🔁 Jogo reiniciado.");
+    }
+
+    // ✅ Novo método para garantir que os botões fiquem por cima do painel
+    void BringButtonsToFront()
+    {
+        restartButton.transform.SetAsLastSibling();
+        replayButton.transform.SetAsLastSibling();
+        skipButton.transform.SetAsLastSibling();
+        undoButton.transform.SetAsLastSibling();
     }
 }
