@@ -182,23 +182,40 @@ public class PuzzleManager : MonoBehaviour
         StopAllCoroutines();
         isReplaying = true;
 
-        foreach (ICommand1 cmd in commandHistory)
+        // ✅ Força cada peça a ficar na posição correta com base no índice
+        for (int i = 0; i < puzzleGrid.childCount; i++)
         {
-            cmd.Execute();
+            for (int j = 0; j < puzzleGrid.childCount; j++)
+            {
+                Piece piece = puzzleGrid.GetChild(j).GetComponent<Piece>();
+                if (piece.correctIndex == i)
+                {
+                    piece.transform.SetSiblingIndex(i);
+                    break;
+                }
+            }
         }
 
-        isReplaying = false;
+        // 🧩 Garante que a UI atualize as posições
+        LayoutRebuilder.ForceRebuildLayoutImmediate(puzzleGrid.GetComponent<RectTransform>());
 
+        // ❌ Esconde painel de vitória e outros botões
         winPanel.SetActive(false);
         undoButton.gameObject.SetActive(false);
         replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
 
+        // ✅ Mostra apenas botão de reinício
         restartButton.gameObject.SetActive(true);
         restartButton.transform.SetAsLastSibling();
 
-        Debug.Log("⏩ Replay pulado!");
+        isReplaying = false;
+
+        Debug.Log("⏩ Replay pulado: peças montadas corretamente e painel escondido.");
     }
+
+
+
 
     public void RestartGame()
     {
