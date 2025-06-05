@@ -10,8 +10,8 @@ public class PuzzleManager : MonoBehaviour
     public Button replayButton;
     public Button skipButton;
 
-    public GameObject winPanel;         // ➕ Painel de vitória
-    public Button restartButton;        // ➕ Botão de jogar novamente
+    public GameObject winPanel;
+    public Button restartButton;
 
     private List<ICommand1> commandHistory = new List<ICommand1>();
     private Stack<ICommand1> undoStack = new Stack<ICommand1>();
@@ -25,8 +25,8 @@ public class PuzzleManager : MonoBehaviour
     {
         replayButton.gameObject.SetActive(false);
         skipButton.gameObject.SetActive(false);
-        winPanel.SetActive(false); // ➕ Oculta painel de vitória no início
-        restartButton.gameObject.SetActive(false); // ➕ Oculta botão de reinício no início
+        winPanel.SetActive(false);
+        restartButton.gameObject.SetActive(false);
 
         SetupPieces();
         ShufflePieces();
@@ -102,14 +102,12 @@ public class PuzzleManager : MonoBehaviour
 
         Debug.Log("🎉 Quebra-cabeça completo!");
 
-        // ➕ Mostrar vitória e todos os botões
         winPanel.SetActive(true);
         restartButton.gameObject.SetActive(true);
         replayButton.gameObject.SetActive(true);
         skipButton.gameObject.SetActive(true);
         undoButton.gameObject.SetActive(true);
 
-        // ✅ Garante que os botões fiquem por cima do painel
         BringButtonsToFront();
     }
 
@@ -119,12 +117,32 @@ public class PuzzleManager : MonoBehaviour
 
         ICommand1 lastCommand = undoStack.Pop();
         lastCommand.Undo();
+
+        // ➕ Esconde painel de vitória se o quebra-cabeça não estiver mais completo
+        if (!IsPuzzleComplete())
+        {
+            winPanel.SetActive(false);
+            // Não esconda os botões!
+            // Os botões permanecem visíveis após o Undo
+        }
+    }
+
+    bool IsPuzzleComplete()
+    {
+        Piece[] currentPieces = puzzleGrid.GetComponentsInChildren<Piece>();
+        for (int i = 0; i < currentPieces.Length; i++)
+        {
+            if (currentPieces[i].correctIndex != i)
+                return false;
+        }
+        return true;
     }
 
     public void StartReplay()
     {
         if (isReplaying) return;
         StartCoroutine(ReplaySequence());
+        winPanel.SetActive(false);
     }
 
     IEnumerator ReplaySequence()
@@ -154,7 +172,6 @@ public class PuzzleManager : MonoBehaviour
         skipButton.gameObject.SetActive(true);
         undoButton.gameObject.SetActive(true);
 
-        // ✅ Traz os botões para frente após replay
         BringButtonsToFront();
 
         Debug.Log("✅ Replay finalizado!");
@@ -178,8 +195,6 @@ public class PuzzleManager : MonoBehaviour
         skipButton.gameObject.SetActive(false);
 
         restartButton.gameObject.SetActive(true);
-
-        // ✅ Traz o botão para frente após pular replay
         restartButton.transform.SetAsLastSibling();
 
         Debug.Log("⏩ Replay pulado!");
@@ -200,7 +215,6 @@ public class PuzzleManager : MonoBehaviour
         Debug.Log("🔁 Jogo reiniciado.");
     }
 
-    // ✅ Novo método para garantir que os botões fiquem por cima do painel
     void BringButtonsToFront()
     {
         restartButton.transform.SetAsLastSibling();
